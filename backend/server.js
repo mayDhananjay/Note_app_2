@@ -40,16 +40,16 @@ app.use(cors({
 
 app.use(express.json());
 
-const REMOTE_BACKEND_URL = "https://mern-notesapp-mlrd.onrender.com";
+// const REMOTE_BACKEND_URL = "https://mern-notesapp-mlrd.onrender.com";
 
-// Option B: Server-side CORS Proxy to remote Render backend
-app.use("/api", async (req, res, next) => {
-    // If the user explicitly sets USE_LOCAL_BACKEND=true, bypass the proxy and use local routes
-    if (process.env.USE_LOCAL_BACKEND === 'true') {
-        return next();
-    }
+// // Option B: Server-side CORS Proxy to remote Render backend
+// app.use("/api", async (req, res, next) => {
+//     // If the user explicitly sets USE_LOCAL_BACKEND=true, bypass the proxy and use local routes
+//     if (process.env.USE_LOCAL_BACKEND === 'true') {
+//         return next();
+//     }
 
-    const remoteUrl = `${REMOTE_BACKEND_URL}${req.originalUrl}`;
+//     const remoteUrl = `${REMOTE_BACKEND_URL}${req.originalUrl}`;
     
     // Build headers to forward
     const headers = {};
