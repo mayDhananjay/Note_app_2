@@ -32,7 +32,8 @@ app.use(cors({
         "https://mern-notes-app-smcs.vercel.app",
         "https://mern-notes-app-kx7p.vercel.app",
         "https://mern-notes-app-z85c.vercel.app",
-        "https://notes-app-gj5v.vercel.app"
+        "https://notes-app-gj5v.vercel.app",
+        "https://note-app-2-pi.vercel.app"
     ],
     credentials: true
 }));
