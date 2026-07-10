@@ -9,34 +9,51 @@ import SharePage from './components/SharePage'
 
 
 function App() {
-  const [user,setUser]=useState(null)
-  const [loading ,setLoading] =useState((true))
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem("user");
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    const token = localStorage.getItem("token");
+    const savedUser = localStorage.getItem("user");
+    return token && !savedUser;
+  });
   const apiUrl = import.meta.env.VITE_API_URL || "";
-  useEffect(()=>{
-    const fetchUser=async()=>{
-    try{
+
+  useEffect(() => {
+    const fetchUser = async () => {
       const token = localStorage.getItem("token");
-      if (!token){
+      if (!token) {
         setLoading(false);
+        setUser(null);
         return;
       }
-      const 
-      {data}= await axios.get(`${apiUrl}/api/users/me`,{
-        headers:{Authorization: `Bearer ${token}`}
-      })
-      setUser(data)
-    }catch{
-      localStorage.removeItem("token")
-
-    }
-    finally{
-      setLoading(false);
-    }
-  }
-  fetchUser();
-
-
-  },[apiUrl]);
+      try {
+        const { data } = await axios.get(`${apiUrl}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUser(data);
+        localStorage.setItem("user", JSON.stringify(data));
+      } catch (err) {
+        if (err.response && err.response.status === 401) {
+          console.warn("Unauthorized on initial load, clearing token and user");
+          localStorage.removeItem("token");
+          localStorage.removeItem("username");
+          localStorage.removeItem("user");
+          setUser(null);
+        } else {
+          console.warn("Failed to fetch user on load due to network/server issue:", err.message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, [apiUrl]);
   if(loading){
     return(
       <div className=' min-h-screen bg-gray-900 flex items-center justify-center'>

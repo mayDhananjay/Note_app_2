@@ -194,6 +194,7 @@ export default function App({ user, setUser }) {
   // Modals status
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditModalActive, setIsEditModalActive] = useState(false);
 
   // Add form fields
   const [addTitle, setAddTitle] = useState("");
@@ -283,6 +284,35 @@ export default function App({ user, setUser }) {
     } else {
       return 'medium';
     }
+  };
+
+  const openEditModal = (note, index, config, priority, savedColorIndex) => {
+    setEditId(note._id);
+    setEditTitle(note.title);
+    setEditDescription(note.description);
+    setEditIsChecklist(config.isChecklist);
+    setEditIsNumbered(config.isNumbered);
+    setEditPriority(priority);
+    setEditSelectedColorIndex(savedColorIndex !== undefined ? savedColorIndex : index % colors.length);
+    setIsEditModalOpen(true);
+    setTimeout(() => {
+      setIsEditModalActive(true);
+    }, 10);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalActive(false);
+    setTimeout(() => {
+      setIsEditModalOpen(false);
+      setEditId("");
+      setEditTitle("");
+      setEditDescription("");
+      setEditIsChecklist(false);
+      setEditIsNumbered(false);
+      setEditPriority("medium");
+      setEditSelectedColorIndex(0);
+      setError("");
+    }, 250);
   };
 
   // Password validation helper
@@ -378,16 +408,21 @@ export default function App({ user, setUser }) {
       const tokenValue = localStorage.getItem("token");
       if (tokenValue) {
         try {
-          const { data } = await axios.get(`${import.meta.env.VITE_API_URL || ""}/api/auth/me`, {
+          const { data } = await axios.get(`${import.meta.env.VITE_API_URL || ""}/api/users/me`, {
             headers: { Authorization: `Bearer ${tokenValue}` }
           });
           setUsername(data.username);
-        } catch {
-          console.warn("Auth token is stale or invalid, logging out silently");
-          localStorage.removeItem("token");
-          localStorage.removeItem("username");
-          setActiveToken("");
-          setUsername("");
+        } catch (err) {
+          if (err.response && err.response.status === 401) {
+            console.warn("Auth token is stale or invalid (401), logging out silently");
+            localStorage.removeItem("token");
+            localStorage.removeItem("username");
+            localStorage.removeItem("user");
+            setActiveToken("");
+            setUsername("");
+          } else {
+            console.warn("Auth token verification failed due to network or server issues:", err.message);
+          }
         }
       }
     };
@@ -592,16 +627,8 @@ export default function App({ user, setUser }) {
     // Update the modified note in the list
     setNotes((prev) => prev.map((note) => note._id === editId ? { ...note, ...updatedNote } : note));
     
-    // Close modal and clear inputs
-    setIsEditModalOpen(false);
-    setEditId("");
-    setEditTitle("");
-    setEditDescription("");
-    setEditIsChecklist(false);
-    setEditIsNumbered(false);
-    setEditPriority("medium");
-    setEditSelectedColorIndex(0);
-    setError("");
+    // Close modal and clear inputs smoothly
+    closeEditModal();
   };
 
   // Toggle note Pin state
@@ -901,14 +928,7 @@ export default function App({ user, setUser }) {
     return (
       <div 
         onClick={() => {
-          setEditId(note._id);
-          setEditTitle(note.title);
-          setEditDescription(note.description);
-          setEditIsChecklist(config.isChecklist);
-          setEditIsNumbered(config.isNumbered);
-          setEditPriority(priority);
-          setEditSelectedColorIndex(savedColorIndex !== undefined ? savedColorIndex : index % colors.length);
-          setIsEditModalOpen(true);
+          openEditModal(note, index, config, priority, savedColorIndex);
         }}
         className={`${colorPreset.bg} ${colorPreset.border} text-stone-900 p-6 rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_32px_rgba(0,0,0,0.08)] border transition-all duration-300 flex flex-col justify-between relative overflow-hidden group hover:-translate-y-1 cursor-pointer hover:border-amber-400`} 
         key={note._id}
@@ -1071,14 +1091,7 @@ export default function App({ user, setUser }) {
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                setEditId(note._id);
-                setEditTitle(note.title);
-                setEditDescription(note.description);
-                setEditIsChecklist(config.isChecklist);
-                setEditIsNumbered(config.isNumbered);
-                setEditPriority(priority);
-                setEditSelectedColorIndex(savedColorIndex !== undefined ? savedColorIndex : index % colors.length);
-                setIsEditModalOpen(true);
+                openEditModal(note, index, config, priority, savedColorIndex);
               }}
               className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold ${colorPreset.buttonText} ${colorPreset.buttonBg} rounded-lg transition-all duration-200 cursor-pointer shadow-xs active:scale-95`}
               id={`edit-button-${note._id}`}
@@ -1128,6 +1141,8 @@ export default function App({ user, setUser }) {
       </div>
     );
   };
+
+  const activeColor = colors[editSelectedColorIndex] || colors[0];
 
   return (
     <>
@@ -1313,32 +1328,6 @@ export default function App({ user, setUser }) {
             </div>
 
             <form onSubmit={handleAddNote} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2" htmlFor="note-title">Title</label>
-                <input 
-                  id="note-title"
-                  type="text" 
-                  value={addTitle}
-                  onChange={(e) => setAddTitle(e.target.value)}
-                  placeholder="Enter notes title..."
-                  className="w-full bg-stone-50/50 border border-stone-200 text-stone-900 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2" htmlFor="note-desc">Description</label>
-                <textarea 
-                  id="note-desc"
-                  rows={4}
-                  value={addDescription}
-                  onChange={(e) => setAddDescription(e.target.value)}
-                  placeholder="Write your note description here... (Use new lines for points/items)"
-                  className="w-full bg-stone-50/50 border border-stone-200 text-stone-900 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors resize-none"
-                  required
-                />
-              </div>
-
               {/* Priority Selector based on beautiful colors */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">Priority level</label>
@@ -1382,8 +1371,34 @@ export default function App({ user, setUser }) {
                 </div>
               </div>
 
-              {/* Color Preset Selector (Fun Idea Addition) */}
               <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2" htmlFor="note-title">Title</label>
+                <input 
+                  id="note-title"
+                  type="text" 
+                  value={addTitle}
+                  onChange={(e) => setAddTitle(e.target.value)}
+                  placeholder="Enter notes title..."
+                  className="w-full bg-stone-50/50 border border-stone-200 text-stone-900 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2" htmlFor="note-desc">Description</label>
+                <textarea 
+                  id="note-desc"
+                  rows={4}
+                  value={addDescription}
+                  onChange={(e) => setAddDescription(e.target.value)}
+                  placeholder="Write your note description here... (Use new lines for points/items)"
+                  className="w-full bg-stone-50/50 border border-stone-200 text-stone-900 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors resize-none"
+                  required
+                />
+              </div>
+
+              {/* Color Preset Selector (Fun Idea Addition) */}
+              <div className="pb-2">
                 <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">Sticky Note Color</label>
                 <div className="flex flex-wrap gap-2.5">
                   {colors.map((color, idx) => {
@@ -1399,35 +1414,6 @@ export default function App({ user, setUser }) {
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Note Formatting Options */}
-              <div className="grid grid-cols-2 gap-4 py-2 border-t border-b border-stone-100 my-4">
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input 
-                    type="checkbox"
-                    checked={addIsChecklist}
-                    onChange={(e) => setAddIsChecklist(e.target.checked)}
-                    className="h-4 w-4 rounded-sm border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer accent-amber-500"
-                  />
-                  <div>
-                    <p className="text-sm font-bold text-stone-800">Add Checkboxes</p>
-                    <p className="text-[11px] text-stone-500">Each line gets a checkbox</p>
-                  </div>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input 
-                    type="checkbox"
-                    checked={addIsNumbered}
-                    onChange={(e) => setAddIsNumbered(e.target.checked)}
-                    className="h-4 w-4 rounded-sm border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer accent-amber-500"
-                  />
-                  <div>
-                    <p className="text-sm font-bold text-stone-800">Numbered Points</p>
-                    <p className="text-[11px] text-stone-500">Each line starts with 1, 2, 3...</p>
-                  </div>
-                </label>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
@@ -1457,9 +1443,16 @@ export default function App({ user, setUser }) {
 
       {/* --- EDIT NOTE MODAL --- */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs" id="edit-note-modal">
-          <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50/50">
+        <div 
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs backdrop-transition ${isEditModalActive ? "opacity-100" : "opacity-0"}`} 
+          id="edit-note-modal"
+          onClick={closeEditModal}
+        >
+          <div 
+            className={`border rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl keep-transition transform ${isEditModalActive ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-4"} ${activeColor.bg} ${activeColor.border}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200/50 bg-stone-50/20 backdrop-blur-xs">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-amber-500/10 text-amber-600 rounded-lg">
                   <Pencil className="w-4 h-4" />
@@ -1467,14 +1460,57 @@ export default function App({ user, setUser }) {
                 <h2 className="text-lg font-black text-stone-900">Edit Note</h2>
               </div>
               <button 
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-stone-400 hover:text-stone-700 p-1 rounded-lg hover:bg-stone-100 cursor-pointer transition-colors"
+                onClick={closeEditModal}
+                className="text-stone-400 hover:text-stone-700 p-1 rounded-lg hover:bg-stone-100/50 cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleEditNote} className="p-6 space-y-4">
+              {/* Priority Selector based on beautiful colors */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">Priority level</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditPriority("low")}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                      editPriority === "low"
+                        ? "bg-sky-50 border-sky-300 text-sky-800 shadow-xs"
+                        : "bg-white/60 border-stone-200/80 text-stone-600 hover:bg-white"
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-sky-400" />
+                    Low
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditPriority("medium")}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                      editPriority === "medium"
+                        ? "bg-amber-50 border-amber-300 text-amber-800 shadow-xs"
+                        : "bg-white/60 border-stone-200/80 text-stone-600 hover:bg-white"
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    Medium
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditPriority("high")}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                      editPriority === "high"
+                        ? "bg-rose-50 border-rose-300 text-rose-800 shadow-xs"
+                        : "bg-white/60 border-stone-200/80 text-stone-600 hover:bg-white"
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-rose-400" />
+                    High
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2" htmlFor="edit-title">Title</label>
                 <input 
@@ -1483,7 +1519,7 @@ export default function App({ user, setUser }) {
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   placeholder="Enter notes title..."
-                  className="w-full bg-stone-50/50 border border-stone-200 text-stone-900 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                  className="w-full bg-white/60 border border-stone-200/80 text-stone-900 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
                   required
                 />
               </div>
@@ -1496,56 +1532,13 @@ export default function App({ user, setUser }) {
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   placeholder="Write your note description here... (Use new lines for points/items)"
-                  className="w-full bg-stone-50/50 border border-stone-200 text-stone-900 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors resize-none"
+                  className="w-full bg-white/60 border border-stone-200/80 text-stone-900 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors resize-none"
                   required
                 />
               </div>
 
-              {/* Priority Selector based on beautiful colors */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">Priority level</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditPriority("low")}
-                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                      editPriority === "low"
-                        ? "bg-sky-50 border-sky-300 text-sky-800 shadow-xs"
-                        : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
-                    }`}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-sky-400" />
-                    Low
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditPriority("medium")}
-                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                      editPriority === "medium"
-                        ? "bg-amber-50 border-amber-300 text-amber-800 shadow-xs"
-                        : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
-                    }`}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    Medium
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditPriority("high")}
-                    className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200 cursor-pointer ${
-                      editPriority === "high"
-                        ? "bg-rose-50 border-rose-300 text-rose-800 shadow-xs"
-                        : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
-                    }`}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-rose-400" />
-                    High
-                  </button>
-                </div>
-              </div>
-
               {/* Color Preset Selector (Fun Idea Addition) */}
-              <div>
+              <div className="pb-2">
                 <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">Sticky Note Color</label>
                 <div className="flex flex-wrap gap-2.5">
                   {colors.map((color, idx) => {
@@ -1563,39 +1556,10 @@ export default function App({ user, setUser }) {
                 </div>
               </div>
 
-              {/* Note Formatting Options */}
-              <div className="grid grid-cols-2 gap-4 py-2 border-t border-b border-stone-100 my-4">
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input 
-                    type="checkbox"
-                    checked={editIsChecklist}
-                    onChange={(e) => setEditIsChecklist(e.target.checked)}
-                    className="h-4 w-4 rounded-sm border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer accent-amber-500"
-                  />
-                  <div>
-                    <p className="text-sm font-bold text-stone-800">Add Checkboxes</p>
-                    <p className="text-[11px] text-stone-500">Each line gets a checkbox</p>
-                  </div>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input 
-                    type="checkbox"
-                    checked={editIsNumbered}
-                    onChange={(e) => setEditIsNumbered(e.target.checked)}
-                    className="h-4 w-4 rounded-sm border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer accent-amber-500"
-                  />
-                  <div>
-                    <p className="text-sm font-bold text-stone-800">Numbered Points</p>
-                    <p className="text-[11px] text-stone-500">Each line starts with 1, 2, 3...</p>
-                  </div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-150">
                 <button 
                   type="button"
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={closeEditModal}
                   className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200/80 text-stone-700 font-semibold rounded-xl text-sm transition-colors cursor-pointer"
                 >
                   Cancel

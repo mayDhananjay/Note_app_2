@@ -7,6 +7,7 @@ const Navbar = ({ user, setUser, searchQuery, setSearchQuery, hideAuthBtn }) => 
   const hendleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("username");
+    localStorage.removeItem("user");
     setUser(null);
     navigate('/');
   };
