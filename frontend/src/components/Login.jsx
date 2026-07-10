@@ -12,6 +12,8 @@ const Login = ({ setUser }) => {
   const navigate = useNavigate();
 
   const handleSubmmit = async (e) => {
+     console.log("API URL:", import.meta.env.VITE_API_URL);
+  console.log("apiUrl:", apiUrl);
     e.preventDefault();
     try {
       const { data } = await axios.post(`${apiUrl}/api/users/login`, {
