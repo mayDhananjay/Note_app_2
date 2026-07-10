@@ -41,7 +41,7 @@ app.use(cors({
 
 app.use(express.json());
 
-const REMOTE_BACKEND_URL = "https://mern-notesapp-mlrd.onrender.com";
+const REMOTE_BACKEND_URL = "https://note-app-2-hbfx.onrender.com";
 
 // Option B: Server-side CORS Proxy to remote Render backend
 app.use("/api", async (req, res, next) => {
