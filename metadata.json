@@ -1,0 +1,6 @@
+{
+  "name": "Personal Notes",
+  "description": "An elegant physical-style sticky notes board app built with the MERN stack featuring light pastel memo pad styles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
